@@ -1,4 +1,5 @@
 # Snake 3D - Mobile - Ready Web Game
+![Screenshot](https://github.com/bob-paydar/Snake-3D-Mobile/blob/main/Screenshot.jpeg)
 
 Snake 3D is a modern, mobile-friendly HTML5/Three.js game featuring responsive 3D graphics, dashcam view, touchscreen controls, and a fully adaptive interface designed to run on both desktop and mobile browsers. The game is optimized for vertical 720×1280 rendering (ideal for YouTube Shorts-style gameplay captures).
 
