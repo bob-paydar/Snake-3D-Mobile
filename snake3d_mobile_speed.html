@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Snake 3D — Mobile</title>
+<style>
+  :root{ --panel:#121924; --panel2:#0e1520; --text:#e7eef7; --muted:#8fa3b6; --accent:#00e07b; --accent2:#22d3ee; --danger:#ff5470; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:#0a0f16;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden;overscroll-behavior:none}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  #stageWrap{position:fixed;left:50%;top:50%;transform-origin:center center;touch-action:none}
+  .app{width:720px;height:1280px;background:
+      radial-gradient(260px 200px at 15% 8%,rgba(34,211,238,.08),transparent 60%),
+      radial-gradient(320px 220px at 85% -5%,rgba(0,224,123,.07),transparent 60%),
+      linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid #1b2a40;border-radius:28px;box-shadow:0 32px 90px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.04);
+    display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;position:relative}
+  header,footer{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .scores{display:flex;gap:10px;align-items:center;font-weight:800}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:14px;font-size:14px;background:linear-gradient(180deg,#0e1624,#0b1220);border:1px solid #1a2a42;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .dot{width:10px;height:10px;border-radius:50%}.score{background:var(--accent)}.best{background:var(--accent2)}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button.icon{appearance:none;border:1px solid #20304a;color:var(--text);background:linear-gradient(180deg,#101a29,#0b1423);
+    padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .06s ease, background .2s ease, border-color .2s}
+  button.icon:active{transform:translateY(1px) scale(.98)}
+  button.icon.tgl[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,224,123,.28)}
+  button.icon.danger{border-color:#402233;color:#ffdce5}
+  .seg{display:flex;border:1px solid #1a2a42;border-radius:12px;overflow:hidden}
+  .seg button{border:none;background:linear-gradient(180deg,#0f1624,#0a121e);color:#a7bed3;padding:8px 12px;font-weight:800}
+  .seg button[aria-pressed="true"]{background:linear-gradient(180deg,#1a2740,#132036);color:#e7eef7;border-right:1px solid #1a2a42;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .seg button+button{border-left:1px solid #1a2a42}
+  .chip{padding:8px 10px;border-radius:12px;border:1px solid #1a2a42;background:#0c1524;color:#8fa3b6;font-size:13px}
+  #gameWrap{position:relative;margin:0 16px 16px;border-radius:18px;overflow:hidden;border:1px solid #1b2a40;background:#0b1220;touch-action:none}
+  canvas{display:block;width:100%;height:100%}
+  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(10,15,23,.72), rgba(10,15,23,.84));backdrop-filter: blur(6px);padding:24px}
+  .card{width:min(92%, 520px);background:linear-gradient(180deg,#0f1624,#0b121e);border:1px solid #20304a;border-radius:16px;padding:18px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+  .title{font-size:24px;font-weight:900;margin:4px 0 10px}
+  .subtitle{color:var(--muted);font-size:14px;margin-bottom:14px}
+  .big-btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:12px 16px;border-radius:14px;font-weight:900;border:1px solid #144a33;color:#052e1d;background:linear-gradient(180deg,#2cf39e,#00e07b);box-shadow:0 12px 24px rgba(0,224,123,.25), inset 0 1px 0 rgba(255,255,255,.6)}
+  .row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+  .footer-grid{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;width:100%}
+  .dpad{justify-self:start;display:grid;grid-template-columns:64px 64px 64px;grid-template-rows:64px 64px 64px;gap:10px;touch-action:none;user-select:none}
+  .dkey{border:1px solid #20304a;border-radius:14px;background:linear-gradient(180deg,#101a29,#0b1423);display:flex;align-items:center;justify-content:center;font-weight:900;color:#cde7ff;box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06)}
+  .dkey:active{transform:translateY(1px) scale(.98)} .dkey.empty{visibility:hidden}
+  .dashwrap{justify-self:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .dashlabel{font-size:12px;color:#a7bed3}
+  #dashcam{width:260px;height:146px;border-radius:12px;border:1px solid #1b2a40;box-shadow:0 8px 20px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.04);background:#0b1220}
+  .tip{justify-self:end}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media (max-width: 480px), (max-height: 900px){
+    .dpad{grid-template-columns:72px 72px 72px;grid-template-rows:72px 72px 72px;gap:10px}
+    .dkey{font-size:22px}
+    #dashcam{width:300px;height:168px}
+  }
+</style>
+</head>
+<body>
+  <div id="stageWrap"><div class="app" role="application" aria-label="Snake 3D Game">
+    <header>
+      <div class="scores">
+        <div class="badge"><span class="dot score"></span>&nbsp;Score&nbsp;<span id="score">0</span></div>
+        <div class="badge"><span class="dot best"></span>&nbsp;Best&nbsp;<span id="best">0</span></div>
+      </div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Speed">
+          <button class="spd" data-speed="Easy"   aria-pressed="true"  title="Slow & kid friendly">Easy</button>
+          <button class="spd" data-speed="Normal" aria-pressed="false" title="Balanced">Normal</button>
+          <button class="spd" data-speed="Hard"   aria-pressed="false" title="Fast">Hard</button>
+        </div>
+        <button class="icon tgl" id="wrapBtn" aria-pressed="true" title="Wrap at edges">Wrap</button>
+        <button class="icon tgl" id="easyBtn" aria-pressed="true" title="Super-Easy: avoid danger">Super-Easy</button>
+        <button class="icon" id="fullBtn" title="Fullscreen">Fullscreen</button>
+        <button class="icon" id="pauseBtn" title="Pause/Resume">Pause</button>
+        <button class="icon danger" id="resetBtn" title="Restart">Restart</button>
+      </div>
+    </header>
+
+    <div id="gameWrap" style="height:100%;">
+      <canvas id="gl"></canvas>
+
+      <div class="overlay" id="overlay" tabindex="0" title="Tap or press Enter/Space to Play">
+        <div class="card">
+          <div class="title">Snake 3D — Mobile</div>
+          <div class="subtitle">Programmer: Bob Paydar</div>
+          <div class="row" style="justify-content:space-between;gap:12px;margin-bottom:12px">
+            <div style="text-align:left">
+              <div class="chip" id="gridChip">Grid: 14×24</div>
+              <div class="chip" id="speedChip">Speed: Easy</div>
+            </div>
+            <div style="text-align:right">
+              <div class="chip">Pause: P</div>
+              <div class="chip">Restart: R</div>
+            </div>
+          </div>
+          <button class="big-btn" id="startBtn">Play</button>
+          <div class="row" style="margin-top:12px">
+            <div class="chip">Best: <span id="ovBest">0</span></div>
+            <div class="chip">Wrap: <span id="ovWrap">ON</span></div>
+            <div class="chip">Super-Easy: <span id="ovEasy">ON</span></div>
+            <div class="chip">Shorts: 720×1280</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="footer-grid">
+        <div class="dpad" id="dpad" aria-hidden="false">
+          <div class="dkey empty"></div>
+          <div class="dkey" data-dir="up" aria-label="Up">▲</div>
+          <div class="dkey empty"></div>
+          <div class="dkey" data-dir="left" aria-label="Left">◀</div>
+          <div class="dkey" data-dir="down" aria-label="Down">▼</div>
+          <div class="dkey" data-dir="right" aria-label="Right">▶</div>
+          <div class="dkey empty"></div><div class="dkey empty"></div><div class="dkey empty"></div>
+        </div>
+
+        <div class="dashwrap">
+          <canvas id="dashcam"></canvas>
+          <div class="dashlabel">Dashcam</div>
+        </div>
+
+        <div class="chip tip">Tip: swipe anywhere to steer</div>
+      </div>
+    </footer>
+  </div></div>
+  <div class="sr" aria-live="polite" id="live"></div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+/* ---------- Stage autoscale for mobile ---------- */
+const stageWrap=document.getElementById('stageWrap');
+function vpSize(){
+  const vv = window.visualViewport;
+  if (vv) return { w: vv.width, h: vv.height };
+  return { w: window.innerWidth, h: window.innerHeight };
+}
+function scaleStage(){
+  const W=720,H=1280;
+  const {w:sw0,h:sh0}=vpSize();
+  const sw=Math.min(sw0, window.innerWidth);
+  const sh=Math.min(sh0, window.innerHeight);
+  const s=Math.min(sw/W, sh/H);
+  stageWrap.style.transform=`translate(-50%,-50%) scale(${s})`;
+}
+window.addEventListener('resize', scaleStage, {passive:true});
+if (window.visualViewport) visualViewport.addEventListener('resize', scaleStage, {passive:true});
+scaleStage();
+
+/* ---------- Prevent scroll/zoom gestures ---------- */
+for (const el of [document.body, stageWrap]) {
+  el.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+}
+document.addEventListener('gesturestart', e=>e.preventDefault());
+document.addEventListener('dblclick', e=>e.preventDefault());
+
+/* ---------- Game Config & Speed Profiles ---------- */
+const GRID_W=14, GRID_H=24;
+const START_LEN=3;
+const SPEEDS = {
+  Easy:   { base: 320, min: 280 },
+  Normal: { base: 220, min: 180 },
+  Hard:   { base: 160, min: 130 }
+};
+let speedName = 'Easy';
+let currentBase = SPEEDS[speedName].base;
+let currentMin  = SPEEDS[speedName].min;
+const SPEEDUP_EVERY=999, SPEEDUP_DELTA=0; // no auto-speedup by score
+let wrapWalls=true, superEasy=true;
+
+/* ---------- UI ---------- */
+const LS={BEST:"snake3d.best"};
+const scoreEl=document.getElementById('score'), bestEl=document.getElementById('best');
+const ovBest=document.getElementById('ovBest'), ovWrap=document.getElementById('ovWrap'), ovEasy=document.getElementById('ovEasy');
+const wrapBtn=document.getElementById('wrapBtn'), easyBtn=document.getElementById('easyBtn');
+const pauseBtn=document.getElementById('pauseBtn'), resetBtn=document.getElementById('resetBtn'), startBtn=document.getElementById('startBtn'), fullBtn=document.getElementById('fullBtn');
+const overlay=document.getElementById('overlay'), gameWrap=document.getElementById('gameWrap'), live=document.getElementById('live');
+const dpad=document.getElementById('dpad'), gridChip=document.getElementById('gridChip'), speedChip=document.getElementById('speedChip');
+const spdBtns = Array.from(document.querySelectorAll('.spd'));
+gridChip.textContent=`Grid: ${GRID_W}×${GRID_H}`;
+speedChip.textContent=`Speed: ${speedName}`;
+let best=Number(localStorage.getItem(LS.BEST)||0); bestEl.textContent=best; if(ovBest) ovBest.textContent=best;
+wrapBtn.setAttribute('aria-pressed','true'); if(ovWrap) ovWrap.textContent='ON';
+easyBtn.setAttribute('aria-pressed','true'); if(ovEasy) ovEasy.textContent='ON';
+
+/* ---------- Directions & State ---------- */
+const DIRS={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}}; // y=0 is TOP row
+let snake,dir,pendingDir,apple,score,stepMs,running=false,dead=false,lastTick=0,acc=0;
+let inputQueue=[]; // stores queued direction changes for extra responsiveness
+
+/* ---------- Three.js (main view) ---------- */
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'low-power'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x0b1220,24,240);
+
+// Camera (main): fixed tilt 45° with tight-fit solver
+const cam=new THREE.PerspectiveCamera(36, 720/(1280-200), 0.1, 3000);
+scene.add(cam);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x88a6c4,0.65));
+const dirLight=new THREE.DirectionalLight(0xffffff,0.9); dirLight.position.set(1,2,1); scene.add(dirLight);
+
+// Board
+const boardGroup=new THREE.Group(); scene.add(boardGroup);
+const cellSize=1, boardW=GRID_W*cellSize, boardH=GRID_H*cellSize;
+const plane=new THREE.Mesh(new THREE.PlaneGeometry(boardW,boardH),
+  new THREE.MeshStandardMaterial({color:0x0c1626,roughness:0.95,metalness:0.0}));
+plane.rotation.x=-Math.PI/2; plane.position.set(0,0,0); boardGroup.add(plane);
+
+// Grid lines
+const gridGeom=new THREE.BufferGeometry();
+{
+  const lines=[]; const x0=-boardW/2,x1=boardW/2,z0=-boardH/2,z1=boardH/2;
+  for(let x=0;x<=GRID_W;x++){ const px=-boardW/2+x*cellSize; lines.push(px,0.001,z0, px,0.001,z1); }
+  for(let y=0;y<=GRID_H;y++){ const pz=-boardH/2+y*cellSize; lines.push(x0,0.001,pz, x1,0.001,pz); }
+  gridGeom.setAttribute('position', new THREE.Float32BufferAttribute(lines,3));
+}
+const gridLines=new THREE.LineSegments(gridGeom,new THREE.LineBasicMaterial({color:0x13243b,transparent:true,opacity:0.9}));
+boardGroup.add(gridLines);
+
+// Snake pieces
+const segGeom=new THREE.BoxGeometry(0.9,0.9,0.9);
+const headMat=new THREE.MeshStandardMaterial({color:0x22d3ee,roughness:0.6,metalness:0.15});
+const bodyMat=new THREE.MeshStandardMaterial({color:0x00e07b,roughness:0.75,metalness:0.08});
+const snakePool=[];
+function getSegMesh(isHead=false){ const m=new THREE.Mesh(segGeom, isHead?headMat:bodyMat); scene.add(m); return m; }
+
+// Apple
+const appleMesh=new THREE.Mesh(new THREE.SphereGeometry(0.42,24,16),
+  new THREE.MeshStandardMaterial({color:0xff5470,emissive:0x642433,emissiveIntensity:0.32,roughness:0.35,metalness:0.2}));
+scene.add(appleMesh);
+
+/* ---------- Grid <-> World ---------- */
+function cellToWorld(x,y){
+  const wx = -boardW/2 + x*cellSize + cellSize/2;
+  const wz = -boardH/2 + y*cellSize + cellSize/2;
+  return new THREE.Vector3(wx,0.45,wz);
+}
+function placeAppleMesh(){ const p=cellToWorld(apple.x,apple.y); appleMesh.position.set(p.x,0.45,p.z); }
+
+/* ---------- Tight-Fit Camera (binary search) ---------- */
+const VIEW_ANGLE_DEG = 60;
+const PAD = 1.03;
+function projectFits(dist){
+  const phi = THREE.MathUtils.degToRad(VIEW_ANGLE_DEG);
+  cam.position.set(0, Math.tan(phi)*dist, dist);
+  cam.lookAt(0,0,0);
+  cam.updateProjectionMatrix();
+
+  const corners = [
+    new THREE.Vector3(-boardW/2,0,-boardH/2),
+    new THREE.Vector3(+boardW/2,0,-boardH/2),
+    new THREE.Vector3(-boardW/2,0,+boardH/2),
+    new THREE.Vector3(+boardW/2,0,+boardH/2)
+  ];
+  const m = 1/PAD; let maxAbsX=0, maxAbsY=0;
+  for(const v of corners){
+    const ndc = v.clone().project(cam);
+    maxAbsX = Math.max(maxAbsX, Math.abs(ndc.x));
+    maxAbsY = Math.max(maxAbsY, Math.abs(ndc.y));
+  }
+  return (maxAbsX <= m && maxAbsY <= m);
+}
+function frameBoardTight(){
+  const rect=gameWrap.getBoundingClientRect();
+  renderer.setSize(rect.width, rect.height, false);
+  cam.aspect = rect.width / rect.height;
+  cam.near = 0.1; cam.far = 5000;
+
+  let lo = 0.1, hi = 2000, guard=0;
+  while(guard++<24 && projectFits(hi)===false) hi *= 1.5;
+  guard=0;
+  while(guard++<24 && projectFits(lo)===true)  lo *= 0.5;
+
+  for(let i=0;i<36;i++){
+    const mid = (lo+hi)/2;
+    if(projectFits(mid)) hi = mid; else lo = mid;
+  }
+  projectFits(hi);
+}
+function fitRenderer(){ frameBoardTight(); }
+window.addEventListener('resize', fitRenderer, {passive:true});
+new ResizeObserver(fitRenderer).observe(gameWrap);
+
+/* ---------- Dashcam (secondary renderer & camera) ---------- */
+const dashCanvas = document.getElementById('dashcam');
+const rendererDash = new THREE.WebGLRenderer({ canvas: dashCanvas, antialias: true, alpha: true, powerPreference: 'low-power' });
+rendererDash.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+const camDash = new THREE.PerspectiveCamera(88, 16/9, 0.02, 60); // wide FOV
+function sizeDash(){
+  const rect = dashCanvas.getBoundingClientRect();
+  rendererDash.setSize(rect.width, rect.height, false);
+  camDash.aspect = rect.width / rect.height;
+  camDash.updateProjectionMatrix();
+}
+new ResizeObserver(sizeDash).observe(dashCanvas);
+
+/* ---------- Game Logic ---------- */
+function announce(m){ live.textContent=m; }
+function resetGame(){
+  score=0; scoreEl.textContent=score; stepMs=currentBase; running=false; dead=false; acc=0; lastTick=0;
+  snake=[]; inputQueue.length=0;
+  const sx=Math.floor(GRID_W/2), sy=Math.floor(GRID_H/2);
+  for(let i=0;i<START_LEN;i++) snake.push({x:sx-i, y:sy});
+  dir=DIRS.right; pendingDir=dir;
+  placeApple(); syncMeshes(true); announce("Ready. Press Play.");
+}
+function placeApple(){ let a; do{ a={x:Math.floor(Math.random()*GRID_W), y:Math.floor(Math.random()*GRID_H)}; }while(snake.some(s=>s.x===a.x&&s.y===a.y)); apple=a; placeAppleMesh(); }
+function speedFromScore(sc){ const tiers=Math.floor(sc/SPEEDUP_EVERY); return Math.max(currentMin, currentBase - tiers*SPEEDUP_DELTA); }
+function willHitWall(nx,ny){ if(wrapWalls) return false; return (nx<0||nx>=GRID_W||ny<0||ny>=GRID_H); }
+function willHitSelf(nx,ny){ return snake.some(s=>s.x===nx && s.y===ny); }
+
+/* ---------- Direction handling: queue + fast-turn window ---------- */
+function isReverse(a,b){ return (a.x+b.x===0)&&(a.y+b.y===0); }
+function enqueueDir(nd){
+  // Prevent reverse of last effective direction or last queued
+  const last = inputQueue.length ? inputQueue[inputQueue.length-1] : pendingDir;
+  if (isReverse(last, nd)) return;
+
+  // cap queue to 2 to avoid long buffers
+  if (inputQueue.length<2) inputQueue.push(nd);
+
+  // make turns feel snappier: if we’re early in the interval, “fast-forward” the clock a bit
+  if (running && acc < stepMs*0.6) acc = stepMs*0.6;
+}
+function setDirection(nd){
+  // immediate change if perpendicular; otherwise enqueue
+  const perpendicular = (dir.x===0 && nd.x!==0) || (dir.y===0 && nd.y!==0);
+  if (perpendicular && !isReverse(dir, nd)) pendingDir = nd;
+  enqueueDir(nd);
+}
+
+/* ---------- Tick ---------- */
+function tick(){
+  // consume queued input first
+  if (inputQueue.length){
+    const nd = inputQueue.shift();
+    if (!isReverse(dir, nd)) pendingDir = nd;
+  }
+  dir=pendingDir;
+
+  let nx=snake[0].x+dir.x, ny=snake[0].y+dir.y;
+  if(wrapWalls){ nx=(nx+GRID_W)%GRID_W; ny=(ny+GRID_H)%GRID_H; }
+  const danger=(willHitWall(nx,ny)||willHitSelf(nx,ny));
+  if(superEasy && danger) return;  // ignore dangerous move in super-easy
+  if(danger) return gameOver();
+
+  snake.unshift({x:nx,y:ny});
+  if(nx===apple.x && ny===apple.y){ score++; scoreEl.textContent=score; stepMs=speedFromScore(score); placeApple(); }
+  else snake.pop();
+}
+
+function gameOver(){
+  running=false; dead=true; inputQueue.length=0;
+  if(score>best){ best=score; localStorage.setItem(LS.BEST,String(best)); }
+  bestEl.textContent=best; if(ovBest) ovBest.textContent=best;
+  overlay.style.display="flex";
+  announce(`Round finished. Score ${score}. Best ${best}.`);
+}
+
+/* ---------- Render Snake ---------- */
+function ensurePool(n){ while(snakePool.length<n) snakePool.push(getSegMesh(false)); }
+function syncMeshes(jump=false){
+  ensurePool(snake.length);
+  for(let i=0;i<snake.length;i++){
+    const seg=snake[i], m=snakePool[i];
+    m.visible=true; m.material=(i===0?headMat:bodyMat);
+    const p=cellToWorld(seg.x,seg.y);
+    if(jump) m.position.set(p.x,0.45,p.z);
+    else m.position.lerp(new THREE.Vector3(p.x,0.45,p.z),0.5);
+    m.scale.set(0.9,0.9,0.9);
+  }
+  for(let i=snake.length;i<snakePool.length;i++) snakePool[i].visible=false;
+}
+
+/* ---------- Input: keyboard + dpad + swipe ---------- */
+window.addEventListener('keydown', e=>{
+  const k=e.key.toLowerCase();
+  if(k==='arrowup'||k==='w') setDirection(DIRS.up);
+  else if(k==='arrowdown'||k==='s') setDirection(DIRS.down);
+  else if(k==='arrowleft'||k==='a') setDirection(DIRS.left);
+  else if(k==='arrowright'||k==='d') setDirection(DIRS.right);
+  else if(k==='p') togglePause();
+  else if(k==='r') restart();
+});
+dpad.addEventListener('pointerdown', e=>{
+  const t=e.target.closest('.dkey'); if(!t||t.classList.contains('empty')) return;
+  const d=t.getAttribute('data-dir'); if(d&&DIRS[d]) setDirection(DIRS[d]);
+});
+let touchStart=null;
+for (const el of [gameWrap, canvas]) {
+  el.addEventListener('pointerdown', e=>{ touchStart={x:e.clientX,y:e.clientY,t:performance.now()}; }, {passive:false});
+  el.addEventListener('pointerup', e=>{
+    if(!touchStart) return;
+    const dx=e.clientX-touchStart.x, dy=e.clientY-touchStart.y;
+    const adx=Math.abs(dx), ady=Math.abs(dy), dt=performance.now()-touchStart.t;
+    if((adx>18||ady>18)&&dt<500){
+      setDirection(adx>ady ? (dx>0?DIRS.right:DIRS.left) : (dy>0?DIRS.down:DIRS.up));
+    }
+    touchStart=null;
+  }, {passive:false});
+}
+
+/* ---------- Buttons ---------- */
+wrapBtn.addEventListener('click',()=>{ wrapWalls=!wrapWalls; wrapBtn.setAttribute('aria-pressed',wrapWalls?'true':'false'); if(ovWrap) ovWrap.textContent=wrapWalls?'ON':'OFF'; });
+easyBtn.addEventListener('click',()=>{ superEasy=!superEasy; easyBtn.setAttribute('aria-pressed',superEasy?'true':'false'); if(ovEasy) ovEasy.textContent=superEasy?'ON':'OFF'; });
+
+spdBtns.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    spdBtns.forEach(b=>b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    speedName = btn.dataset.speed;
+    currentBase = SPEEDS[speedName].base;
+    currentMin  = SPEEDS[speedName].min;
+    stepMs = currentBase;            // apply immediately
+    speedChip.textContent = `Speed: ${speedName}`;
+    // tiny haptic + fast-turn nudge so it "feels" instant
+    navigator.vibrate?.(8);
+    if (running && acc < stepMs*0.5) acc = stepMs*0.5;
+  });
+});
+
+function togglePause(){ if(dead) return; running=!running; overlay.style.display=running?"none":"flex"; }
+function restart(){ resetGame(); overlay.style.display="flex"; }
+pauseBtn.addEventListener('click',togglePause);
+resetBtn.addEventListener('click',restart);
+startBtn.addEventListener('click',startPlay);
+overlay.addEventListener('click',(e)=>{ if(e.target.closest('.card')) startPlay(); });
+overlay.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' ') startPlay(); });
+
+/* ---------- Fullscreen (mobile-friendly) ---------- */
+fullBtn.addEventListener('click', async ()=>{
+  try{
+    const el=document.documentElement;
+    if(!document.fullscreenElement){
+      if(el.requestFullscreen) await el.requestFullscreen();
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }else{
+      await document.exitFullscreen?.();
+    }
+    setTimeout(scaleStage, 200);
+  }catch(_){}
+});
+
+/* ---------- Boot & Main Loop ---------- */
+resetGame(); fitRenderer(); sizeDash();
+
+function startPlay(){
+  overlay.style.display="none"; running=true; dead=false; acc=0; lastTick=performance.now(); fitRenderer();
+  if (screen.orientation?.lock) { screen.orientation.lock('portrait').catch(()=>{}); }
+  navigator.vibrate?.(10);
+}
+
+function updateDashcam(){
+  if(!snake || !snake.length) return;
+  const head = snake[0];
+  const p = cellToWorld(head.x, head.y);
+  const fwd = new THREE.Vector3(dir.x, 0, dir.y).normalize();
+  const eye = p.clone().addScaledVector(fwd, 1.0).add(new THREE.Vector3(0, 0.38, 0));
+  const target = p.clone().addScaledVector(fwd, 3.5);
+  camDash.position.lerp(eye, 0.45);
+  camDash.lookAt(target);
+}
+
+function animate(ts){
+  requestAnimationFrame(animate);
+  if(!lastTick) lastTick=ts;
+  const dt=ts-lastTick; lastTick=ts;
+  if(running){
+    acc+=dt;
+    while(acc>=stepMs){ tick(); acc-=stepMs; }
+  }
+  syncMeshes(false);
+  renderer.render(scene, cam);
+  updateDashcam();
+  rendererDash.render(scene, camDash);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
